@@ -7,9 +7,6 @@ import RecommendationsPanel from '@/components/configurateur/RecommendationsPane
   <div class="flex h-screen bg-gray-50">
     <!-- Colonne de gauche - Configuration -->
     <div class="w-[400px] min-w-[400px] overflow-y-auto border-r border-gray-200 bg-white">
-      <div class="p-6">
-        <h1 class="text-2xl font-bold text-gray-900">Configurateur d'Enceintes</h1>
-      </div>
       <ConfigurationPanel />
     </div>
 
