@@ -1,39 +1,52 @@
-# configurateur-enceintes
+# AcuoTune
 
-This template should help get you started developing with Vue 3 in Vite.
+Un outil interactif de simulation et configuration d'enceintes acoustiques développé avec Vue 3 et TypeScript.
 
-## Recommended IDE Setup
+## Fonctionnalités
 
-[VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+- Configuration interactive des paramètres d'enceintes
+- Simulation en temps réel de la réponse en fréquence
+- Support multi-voies (2-4 voies)
+- Différents types de charges (clos, bass-reflex, double bass-reflex)
+- Visualisation des courbes de réponse individuelles et globale
+- Paramètres avancés (Q, fréquence d'accord, pentes de filtrage)
 
-## Type Support for `.vue` Imports in TS
+## Technologies utilisées
 
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) to make the TypeScript language service aware of `.vue` types.
+- Vue 3
+- TypeScript
+- Chart.js
+- Pinia
+- Tailwind CSS
 
-## Customize configuration
+## Installation
 
-See [Vite Configuration Reference](https://vite.dev/config/).
+1. Cloner le repository
+2. Installer les dépendances
+3. Lancer le serveur de développement
 
-## Project Setup
-
-```sh
-yarn
+```bash
+npm install
+npm run dev
 ```
 
-### Compile and Hot-Reload for Development
+## Structure du projet
 
-```sh
-yarn dev
-```
+    src/
+    ├── utils/
+    │ ├── calculations/
+    │ │ ├── acoustic.ts
+    │ │ └── crossover.ts
+    │ └── filters.ts
+    └── components/
 
-### Type-Check, Compile and Minify for Production
+## Contribution
 
-```sh
-yarn build
-```
+1. Forker le repository
+2. Créer une branche
+3. Faire un commit et un push
+4. Créer une pull request
 
-### Lint with [ESLint](https://eslint.org/)
+## Licence
 
-```sh
-yarn lint
-```
+[MIT](https://opensource.org/licenses/MIT)
