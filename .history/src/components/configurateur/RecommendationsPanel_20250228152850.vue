@@ -55,8 +55,9 @@ const speakerRecommendations = [
 </script>
 
 <template>
-  <div class="w-full">
+  <div class="w-full bg-white rounded-lg shadow-sm border border-gray-200">
     <div class="p-6">
+
       <h2 class="text-2xl font-bold text-gray-900">Recommandations</h2>
       <p class="mt-1 text-sm text-gray-500 mb-6">Spécifications techniques recommandées pour votre enceinte</p>
 

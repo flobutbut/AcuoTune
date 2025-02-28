@@ -67,22 +67,37 @@ export function calculateElectronic(config: Config, acoustic?: AcousticResult): 
 }
 
 export function calculateCrossoverFrequencies(config: Config): string[] {
-  // Utiliser les fréquences manuelles si elles sont définies
-  if (config.freqCoupureManuelle && config.freqCoupureManuelle.length > 0) {
-    return config.freqCoupureManuelle.map(f => `${f} Hz`)
+  // Fréquences de coupure par défaut selon le nombre de voies
+  let frequencies: string[] = []
+  
+  // Si les paramètres avancés sont activés, utiliser les fréquences manuelles
+  if (config.showAdvanced && config.freqCoupureManuelle) {
+    frequencies = config.freqCoupureManuelle.map(f => `${f} Hz`)
+  } else {
+    // Fréquences automatiques selon le nombre de voies
+    switch (config.nombreVoies) {
+      case 2:
+        frequencies = ['3000 Hz']
+        break
+      case 3:
+        frequencies = ['500 Hz', '5000 Hz']
+        break
+      case 4:
+        frequencies = ['250 Hz', '1500 Hz', '8000 Hz']
+        break
+      default:
+        frequencies = ['3000 Hz']
+    }
   }
 
-  // Sinon, utiliser les fréquences automatiques selon le nombre de voies
-  switch (config.nombreVoies) {
-    case 2:
-      return ['3000 Hz']
-    case 3:
-      return ['500 Hz', '5000 Hz']
-    case 4:
-      return ['250 Hz', '1500 Hz', '8000 Hz']
-    default:
-      return ['3000 Hz']
-  }
+  console.log('Crossover frequencies calculation:', {
+    showAdvanced: config.showAdvanced,
+    nombreVoies: config.nombreVoies,
+    freqCoupureManuelle: config.freqCoupureManuelle,
+    result: frequencies
+  })
+
+  return frequencies
 }
 
 function calculateFilterSlope(config: Config): string {

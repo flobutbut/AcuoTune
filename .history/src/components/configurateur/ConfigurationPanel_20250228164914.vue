@@ -66,9 +66,21 @@ const handleFreqCoupureChange = (event: Event, index: number) => {
 }
 
 const facteurQualiteOptions = [
-  { value: 0.6, label: 'Neutre', description: 'Son neutre et précis (0.6)' },
-  { value: 0.707, label: 'Standard', description: 'Équilibre Butterworth (0.707)' },
-  { value: 0.9, label: 'Impact', description: 'Plus d\'impact dans les graves (0.9)' }
+  { 
+    value: 0.6, 
+    label: 'Neutre',
+    description: 'Son neutre et précis (0.6)'
+  },
+  { 
+    value: 0.707, 
+    label: 'Standard',
+    description: 'Équilibre Butterworth (0.707)'
+  },
+  { 
+    value: 0.9, 
+    label: 'Impact',
+    description: 'Plus d\'impact dans les graves (0.9)'
+  }
 ]
 
 // Calcul de la fréquence d'accord par défaut
@@ -82,12 +94,6 @@ const defaultAccordEvent = computed(() => {
   
   return baseFreq
 })
-
-const toggleAdvanced = () => {
-  store.updateConfig({
-    showAdvanced: !config.value.showAdvanced
-  })
-}
 </script>
 
 <template>
@@ -191,24 +197,29 @@ const toggleAdvanced = () => {
         @update="handleChange"
       />
 
-      <!-- Bouton paramètres avancés -->
-      <div class="flex items-center justify-between py-4">
-        <span class="text-sm font-medium text-gray-900">Paramètres avancés</span>
+      <!-- Mode avancé toggle -->
+      <div class="flex items-center justify-between">
+        <span class="text-sm font-medium text-gray-700">Mode avancé</span>
         <button
           type="button"
-          @click="() => store.updateConfig({ showAdvanced: !config.showAdvanced })"
-          class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2"
-          :class="[config.showAdvanced ? 'bg-indigo-600' : 'bg-gray-200']"
+          :class="[
+            'relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2',
+            config.showAdvanced ? 'bg-indigo-600' : 'bg-gray-200'
+          ]"
+          @click="handleChange({ target: { name: 'showAdvanced', value: !config.showAdvanced } } as Event)"
         >
           <span
-            class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
-            :class="[config.showAdvanced ? 'translate-x-5' : 'translate-x-0']"
+            :class="[
+              'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out',
+              config.showAdvanced ? 'translate-x-5' : 'translate-x-0'
+            ]"
           />
         </button>
       </div>
 
       <!-- Paramètres avancés -->
-      <div v-if="config.showAdvanced" class="space-y-6">
+      <div v-if="config.showAdvanced" class="space-y-6 border-t pt-6">
+        <!-- Type de charge -->
         <ToggleGroup
           v-model="config.typeCharge"
           label="Type de charge"
@@ -221,13 +232,69 @@ const toggleAdvanced = () => {
           class="mb-8"
         />
 
-        <ToggleGroup
-          v-model="config.facteurQualite"
-          label="Facteur de qualité"
-          description="Contrôle la résonance et l'amortissement"
-          :options="facteurQualiteOptions"
-          class="mb-8"
-        />
+        <!-- Paramètres avancés selon le type de charge -->
+        <template v-if="config.typeCharge !== 'clos'">
+          <div class="space-y-2">
+            <div class="flex items-center justify-between">
+              <div>
+                <label class="block text-sm font-medium text-gray-700">
+                  Fréquence d'accord (Hz)
+                </label>
+                <p class="mt-1 text-sm text-gray-500">
+                  Détermine la fréquence de résonance du bass-reflex. Une valeur plus basse étend les graves mais réduit leur précision.
+                </p>
+              </div>
+              <div class="relative group">
+                <button type="button" class="text-gray-400 hover:text-gray-500">
+                  <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                  </svg>
+                </button>
+                <div class="hidden group-hover:block absolute z-10 w-72 p-2 text-sm bg-gray-900 text-white rounded-md -top-2 right-6">
+                  Valeurs recommandées :
+                  <ul class="mt-1 list-disc list-inside">
+                    <li>Bibliothèque : 45-55 Hz</li>
+                    <li>Colonne : 35-45 Hz</li>
+                    <li>Double bass-reflex : -20% sur ces valeurs</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <RangeInput
+              name="accordEvent"
+              :value="defaultAccordEvent"
+              :min="20"
+              :max="100"
+              :step="1"
+              unit="Hz"
+              @update="handleChange"
+            />
+          </div>
+        </template>
+
+        <div class="space-y-2 mb-8">
+          <div class="flex items-center justify-between mb-2">
+            <div>
+              <label class="block text-sm font-medium text-gray-700">
+                Facteur de qualité
+              </label>
+              <p class="mt-1 text-sm text-gray-500">
+                Contrôle la résonance et l'amortissement.
+              </p>
+            </div>
+          </div>
+          <ToggleGroup
+            v-model="config.facteurQualite"
+            label="Facteur de qualité"
+            description="Contrôle la résonance et l'amortissement"
+            :options="[
+              { value: 0.6, label: 'Neutre', description: 'Son neutre et précis (0.6)' },
+              { value: 0.707, label: 'Standard', description: 'Équilibre Butterworth (0.707)' },
+              { value: 0.9, label: 'Impact', description: 'Plus d\'impact dans les graves (0.9)' }
+            ]"
+            class="mb-8"
+          />
+        </div>
       </div>
     </div>
   </div>

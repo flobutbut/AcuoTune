@@ -10,7 +10,7 @@ import { calculateAcoustic } from '@/utils/calculations/acoustic'
 import { calculateElectronic } from '@/utils/calculations/electronic'
 import { calculatePhysical } from '@/utils/calculations/physical'
 import { calculateSpeakers } from '@/utils/calculations/speakers'
-import { calculateAutoTypeCharge, calculateAutoFacteurQualite, updateInterdependentParams } from '@/utils/calculations/acoustic'
+import { calculateAutoTypeCharge, calculateAutoFacteurQualite } from '@/utils/calculations/acoustic'
 
 const getTweeterTechnologie = (styleMusical: string, budgetNiveau: string): string => {
   if (styleMusical === 'hifi' || budgetNiveau === 'élevé') {
@@ -107,30 +107,29 @@ export const useConfigurateurStore = defineStore('configurateur', {
 
   actions: {
     updateConfig(update: Partial<Config>) {
+      // Si on active/désactive les paramètres avancés
       if ('showAdvanced' in update) {
         this.config.showAdvanced = update.showAdvanced
         return
       }
 
-      // On met à jour d'abord les paramètres reçus
-      this.config = {
-        ...this.config,
-        ...update
-      }
-
-      // On calcule les interdépendances
-      const interdependentUpdates = updateInterdependentParams(this.config)
-      
-      // On applique les mises à jour interdépendantes
-      this.config = {
-        ...this.config,
-        ...interdependentUpdates
-      }
-
-      // Si mode non avancé, on calcule aussi les paramètres avancés
+      // Si les paramètres avancés sont désactivés, on calcule automatiquement
       if (!this.config.showAdvanced) {
+        // On met à jour d'abord les paramètres standards
+        this.config = {
+          ...this.config,
+          ...update
+        }
+
+        // Puis on recalcule automatiquement les paramètres avancés
         this.config.typeCharge = calculateAutoTypeCharge(this.config)
         this.config.facteurQualite = calculateAutoFacteurQualite(this.config)
+      } else {
+        // En mode avancé, on met à jour directement les valeurs
+        this.config = {
+          ...this.config,
+          ...update
+        }
       }
     },
 

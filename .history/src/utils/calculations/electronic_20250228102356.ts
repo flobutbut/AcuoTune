@@ -10,79 +10,63 @@ interface AcousticResult {
   puissanceMax: number
 }
 
-interface ElectronicRecommendation {
-  frequencesCoupure: string[]
-  penteFiltre: string
-  impedanceGlobale: string
-  puissanceAdmissible: string
-  sensibilite: string
-  facteurQ: number
-}
-
-export function calculateElectronic(config: Config, acoustic?: AcousticResult): ElectronicRecommendation {
+export function calculateElectronic(config: Config, acoustic: AcousticResult): ElectronicRecommendation {
   console.log('Calculating electronic parameters for:', { config, acoustic })
 
   // Calcul des fréquences de coupure
   const frequencesCoupure = calculateCrossoverFrequencies(config)
 
   // Calcul de la pente des filtres
-  let penteFiltre = '12 dB/octave' // Valeur par défaut
-  if (config.nombreVoies >= 3) {
-    penteFiltre = '24 dB/octave'
-  }
-
-  // Vérification que la pente est bien définie
-  if (!penteFiltre.includes('dB/octave')) {
-    console.warn('Invalid filter slope, using default')
-    penteFiltre = '12 dB/octave'
-  }
+  const penteFiltre = calculateFilterSlope(config)
 
   // Calcul de l'impédance globale
   const impedanceGlobale = calculateGlobalImpedance(config)
 
   // Calcul de la puissance admissible
-  const puissanceAdmissible = calculateAdmissiblePower(acoustic?.puissanceMax || 0)
+  const puissanceAdmissible = calculateAdmissiblePower(acoustic.puissanceMax)
 
   // Calcul de la sensibilité globale
-  const sensibilite = calculateGlobalSensitivity(config, acoustic || {
-    volumeOptimal: 0,
-    frequenceAccord: 0,
-    facteurQualite: 0,
-    frequenceResonance: 0,
-    rendementBasse: 0,
-    puissanceMax: 0
-  })
+  const sensibilite = calculateGlobalSensitivity(config, acoustic)
 
   const result: ElectronicRecommendation = {
     frequencesCoupure,
     penteFiltre,
     impedanceGlobale,
     puissanceAdmissible,
-    sensibilite,
-    facteurQ: config.facteurQualite
+    sensibilite
   }
 
   console.log('Electronic calculation result:', result)
   return result
 }
 
-export function calculateCrossoverFrequencies(config: Config): string[] {
-  // Utiliser les fréquences manuelles si elles sont définies
-  if (config.freqCoupureManuelle && config.freqCoupureManuelle.length > 0) {
-    return config.freqCoupureManuelle.map(f => `${f} Hz`)
+function calculateCrossoverFrequencies(config: Config): string[] {
+  // Si mode avancé et fréquences manuelles définies, les utiliser
+  if (config.showAdvanced && config.freqCoupureManuelle.length > 0) {
+    return config.freqCoupureManuelle.map(freq => `${freq} Hz`)
   }
 
-  // Sinon, utiliser les fréquences automatiques selon le nombre de voies
+  // Sinon, calculer les fréquences recommandées
+  const freqs: number[] = []
   switch (config.nombreVoies) {
     case 2:
-      return ['3000 Hz']
+      freqs.push(config.styleMusical === 'bass' ? 2500 : 3000)
+      break
     case 3:
-      return ['500 Hz', '5000 Hz']
+      freqs.push(
+        config.styleMusical === 'bass' ? 400 : 500,
+        config.styleMusical === 'bass' ? 2500 : 3000
+      )
+      break
     case 4:
-      return ['250 Hz', '1500 Hz', '8000 Hz']
-    default:
-      return ['3000 Hz']
+      freqs.push(
+        config.styleMusical === 'bass' ? 200 : 250,
+        config.styleMusical === 'bass' ? 800 : 1000,
+        config.styleMusical === 'bass' ? 2500 : 3000
+      )
+      break
   }
+  return freqs.map(freq => `${freq} Hz`)
 }
 
 function calculateFilterSlope(config: Config): string {

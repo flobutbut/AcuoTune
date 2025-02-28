@@ -66,9 +66,21 @@ const handleFreqCoupureChange = (event: Event, index: number) => {
 }
 
 const facteurQualiteOptions = [
-  { value: 0.6, label: 'Neutre', description: 'Son neutre et précis (0.6)' },
-  { value: 0.707, label: 'Standard', description: 'Équilibre Butterworth (0.707)' },
-  { value: 0.9, label: 'Impact', description: 'Plus d\'impact dans les graves (0.9)' }
+  { 
+    value: 0.6, 
+    label: 'Neutre',
+    description: 'Son neutre et précis (0.6)'
+  },
+  { 
+    value: 0.707, 
+    label: 'Standard',
+    description: 'Équilibre Butterworth (0.707)'
+  },
+  { 
+    value: 0.9, 
+    label: 'Impact',
+    description: 'Plus d\'impact dans les graves (0.9)'
+  }
 ]
 
 // Calcul de la fréquence d'accord par défaut
@@ -196,7 +208,7 @@ const toggleAdvanced = () => {
         <span class="text-sm font-medium text-gray-900">Paramètres avancés</span>
         <button
           type="button"
-          @click="() => store.updateConfig({ showAdvanced: !config.showAdvanced })"
+          @click="toggleAdvanced"
           class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2"
           :class="[config.showAdvanced ? 'bg-indigo-600' : 'bg-gray-200']"
         >
@@ -225,7 +237,11 @@ const toggleAdvanced = () => {
           v-model="config.facteurQualite"
           label="Facteur de qualité"
           description="Contrôle la résonance et l'amortissement"
-          :options="facteurQualiteOptions"
+          :options="[
+            { value: 0.6, label: 'Neutre', description: 'Son neutre et précis (0.6)' },
+            { value: 0.707, label: 'Standard', description: 'Équilibre Butterworth (0.707)' },
+            { value: 0.9, label: 'Impact', description: 'Plus d\'impact dans les graves (0.9)' }
+          ]"
           class="mb-8"
         />
       </div>

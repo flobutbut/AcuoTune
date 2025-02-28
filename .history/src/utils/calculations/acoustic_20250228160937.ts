@@ -249,32 +249,40 @@ export class AcousticCalculator {
   }
 }
 
-export function calculateAcoustic(config: Config): AcousticParameters {
+export function calculateAcoustic(config: Config, electronicParams?: ElectronicParams) {
   console.log('Calculating acoustic parameters for:', config)
 
-  // Calcul du volume optimal
-  const volumeOptimal = calculateOptimalVolume(config)
+  // Récupération du facteur de qualité depuis la config
+  const facteurQ = parseFloat(config.facteurQualite.toString())
+  
+  // Utilisation du facteur Q dans les calculs
+  let volumeOptimal = calculateBaseVolume(config)
+  
+  // Ajustement du volume en fonction du facteur Q
+  if (facteurQ <= 0.6) {
+    // Pour un son plus neutre, on réduit légèrement le volume
+    volumeOptimal *= 0.9
+  } else if (facteurQ >= 0.9) {
+    // Pour plus d'impact, on augmente légèrement le volume
+    volumeOptimal *= 1.2
+  }
 
-  // Calcul de la fréquence d'accord
-  const frequenceAccord = config.typeCharge === 'clos' 
-    ? 0 
-    : config.accordEvent || calculateDefaultAccordFrequency(config)
-
-  // Autres calculs
-  const facteurQualite = config.facteurQualite
+  // Ajustement de la fréquence de résonance en fonction du facteur Q
   const frequenceResonance = calculateResonanceFrequency(config)
-  const rendementBasse = calculateBassEfficiency(volumeOptimal)
-  const puissanceMax = calculateMaxPower(config)
-  const freqCoupure = calculateCrossoverFrequencies(config)
+  const frequenceResonanceAjustee = facteurQ >= 0.9 
+    ? frequenceResonance * 0.9  // Plus bas pour plus d'impact
+    : facteurQ <= 0.6 
+      ? frequenceResonance * 1.1  // Plus haut pour plus de neutralité
+      : frequenceResonance
 
-  const result: AcousticParameters = {
+  const result = {
     volumeOptimal,
-    frequenceAccord,
-    facteurQualite,
-    frequenceResonance,
-    rendementBasse,
-    puissanceMax,
-    freqCoupure
+    frequenceAccord: config.typeCharge === 'clos' ? 0 : frequenceResonanceAjustee,
+    facteurQualite: facteurQ,
+    frequenceResonance: frequenceResonanceAjustee,
+    rendementBasse: calculateBassSensitivity(config),
+    puissanceMax: calculateMaxPower(config),
+    freqCoupure: electronicParams?.frequencesCoupure || []
   }
 
   console.log('Acoustic calculation result:', result)
@@ -369,60 +377,4 @@ function calculateCrossoverFrequencies(config: Config): string[] {
       break
   }
   return freqs.map(f => `${f} Hz`)
-}
-
-export function calculateAutoTypeCharge(config: Config): string {
-  // Le type de charge dépend de plusieurs paramètres
-  if (config.distanceAuMur === 'proche') {
-    return 'clos'
-  }
-  if (config.typeEnceinte === 'bibliothèque') {
-    return config.amplitudeEcoute === 'forte' ? 'bass-reflex' : 'clos'
-  }
-  if (config.styleMusical === 'electro' || config.styleMusical === 'rock') {
-    return 'double-bass-reflex'
-  }
-  return 'bass-reflex'
-}
-
-export function calculateAutoFacteurQualite(config: Config): number {
-  // Le facteur de qualité dépend du style et de l'amplitude
-  if (config.amplitudeEcoute === 'forte') {
-    return 0.9 // Plus d'impact pour forte amplitude
-  }
-  if (config.styleMusical === 'classique' || config.styleMusical === 'acoustique') {
-    return 0.6 // Plus neutre pour la musique acoustique
-  }
-  if (config.distanceAuMur === 'proche') {
-    return 0.707 // Butterworth pour position proche du mur
-  }
-  return 0.8 // Valeur intermédiaire par défaut
-}
-
-export function updateInterdependentParams(config: Config): Partial<Config> {
-  const updates: Partial<Config> = {}
-
-  // Ajustement de la puissance selon l'amplitude d'écoute
-  if (config.amplitudeEcoute === 'forte') {
-    updates.puissanceAmp = Math.max(config.puissanceAmp, 100)
-  }
-
-  // Ajustement du nombre de voies selon le style musical
-  if (config.styleMusical === 'classique' || config.styleMusical === 'acoustique') {
-    updates.nombreVoies = Math.max(config.nombreVoies, 3)
-  }
-
-  // Ajustement de l'impédance selon la puissance
-  if (config.puissanceAmp > 150) {
-    updates.impedance = 4
-  }
-
-  // Ajustement de l'accord event selon le type d'enceinte
-  if (config.typeEnceinte === 'colonne') {
-    updates.accordEvent = 35 // Plus bas pour les colonnes
-  } else {
-    updates.accordEvent = 50 // Standard pour bibliothèque
-  }
-
-  return updates
 } 

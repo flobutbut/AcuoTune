@@ -14,6 +14,7 @@
     "deploy": "gh-pages -d dist --dotfiles"
   },
   "dependencies": {
+    "@headlessui/vue": "^1.7.23",
     "chart.js": "^4.4.8",
     "pinia": "^2.1.7",
     "vue": "^3.3.4",

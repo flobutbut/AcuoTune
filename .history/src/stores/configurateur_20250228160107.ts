@@ -10,7 +10,6 @@ import { calculateAcoustic } from '@/utils/calculations/acoustic'
 import { calculateElectronic } from '@/utils/calculations/electronic'
 import { calculatePhysical } from '@/utils/calculations/physical'
 import { calculateSpeakers } from '@/utils/calculations/speakers'
-import { calculateAutoTypeCharge, calculateAutoFacteurQualite, updateInterdependentParams } from '@/utils/calculations/acoustic'
 
 const getTweeterTechnologie = (styleMusical: string, budgetNiveau: string): string => {
   if (styleMusical === 'hifi' || budgetNiveau === 'élevé') {
@@ -51,7 +50,7 @@ const defaultConfig: Config = {
   puissanceAmp: 100,
   impedance: 8,
   amplitudeEcoute: 'moyenne',
-  styleMusical: 'neutre',
+  styleMusical: 'acoustique',
   typeEnceinte: 'bibliothèque',
   distanceAuMur: 'moyenne',
   utilisationPrincipale: 'musique',
@@ -60,8 +59,8 @@ const defaultConfig: Config = {
   showAdvanced: false,
   // Valeurs avancées
   penteFiltre: 12,
-  freqCoupureManuelle: [],
-  accordEvent: 0,
+  freqCoupureManuelle: [500, 5000],
+  accordEvent: 50,
   facteurQualite: 0.707
 }
 
@@ -97,40 +96,43 @@ export const useConfigurateurStore = defineStore('configurateur', {
       budgetNiveau: 'moyen',
       distanceAuMur: 'moyenne',
       utilisationPrincipale: 'musique',
-      typeCharge: 'bass-reflex',
-      facteurQualite: 0.707,
       showAdvanced: false,
+      typeCharge: 'bass-reflex',
       accordEvent: 50,
+      facteurQualite: 0.707, // Valeur par défaut Butterworth
       freqCoupureManuelle: [500, 5000]
     } as Config
   }),
 
   actions: {
     updateConfig(update: Partial<Config>) {
-      if ('showAdvanced' in update) {
-        this.config.showAdvanced = update.showAdvanced
-        return
-      }
-
-      // On met à jour d'abord les paramètres reçus
       this.config = {
         ...this.config,
         ...update
       }
 
-      // On calcule les interdépendances
-      const interdependentUpdates = updateInterdependentParams(this.config)
-      
-      // On applique les mises à jour interdépendantes
-      this.config = {
-        ...this.config,
-        ...interdependentUpdates
+      // Si on change le type de charge, on ajuste la fréquence d'accord
+      if (update.typeCharge) {
+        const baseFreq = this.config.typeEnceinte === 'bibliothèque' ? 50 : 40
+        this.config.accordEvent = update.typeCharge === 'double-bass-reflex' 
+          ? Math.round(baseFreq * 0.8) 
+          : baseFreq
       }
 
-      // Si mode non avancé, on calcule aussi les paramètres avancés
-      if (!this.config.showAdvanced) {
-        this.config.typeCharge = calculateAutoTypeCharge(this.config)
-        this.config.facteurQualite = calculateAutoFacteurQualite(this.config)
+      // Si on change le facteur de qualité, on ajuste les recommandations
+      if (update.facteurQualite) {
+        // Mise à jour des fréquences de coupure en fonction du facteur de qualité
+        const q = parseFloat(update.facteurQualite.toString())
+        if (q <= 0.6) {
+          // Pour un son plus neutre, on augmente légèrement les fréquences de coupure
+          this.config.freqCoupureManuelle = [600, 5500]
+        } else if (q >= 0.9) {
+          // Pour plus d'impact, on baisse légèrement les fréquences de coupure
+          this.config.freqCoupureManuelle = [400, 4500]
+        } else {
+          // Valeurs standard pour Butterworth
+          this.config.freqCoupureManuelle = [500, 5000]
+        }
       }
     },
 

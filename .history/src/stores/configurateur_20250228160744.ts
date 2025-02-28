@@ -10,7 +10,6 @@ import { calculateAcoustic } from '@/utils/calculations/acoustic'
 import { calculateElectronic } from '@/utils/calculations/electronic'
 import { calculatePhysical } from '@/utils/calculations/physical'
 import { calculateSpeakers } from '@/utils/calculations/speakers'
-import { calculateAutoTypeCharge, calculateAutoFacteurQualite, updateInterdependentParams } from '@/utils/calculations/acoustic'
 
 const getTweeterTechnologie = (styleMusical: string, budgetNiveau: string): string => {
   if (styleMusical === 'hifi' || budgetNiveau === 'élevé') {
@@ -97,41 +96,30 @@ export const useConfigurateurStore = defineStore('configurateur', {
       budgetNiveau: 'moyen',
       distanceAuMur: 'moyenne',
       utilisationPrincipale: 'musique',
-      typeCharge: 'bass-reflex',
-      facteurQualite: 0.707,
       showAdvanced: false,
+      typeCharge: 'bass-reflex',
       accordEvent: 50,
+      facteurQualite: 0.707, // Valeur par défaut Butterworth
       freqCoupureManuelle: [500, 5000]
     } as Config
   }),
 
   actions: {
     updateConfig(update: Partial<Config>) {
-      if ('showAdvanced' in update) {
-        this.config.showAdvanced = update.showAdvanced
-        return
+      console.log('Store receiving update:', update) // Debug log
+      
+      // Vérification spécifique pour facteurQualite
+      if ('facteurQualite' in update) {
+        console.log('Updating facteurQualite:', update.facteurQualite, typeof update.facteurQualite)
       }
 
-      // On met à jour d'abord les paramètres reçus
       this.config = {
         ...this.config,
         ...update
       }
 
-      // On calcule les interdépendances
-      const interdependentUpdates = updateInterdependentParams(this.config)
-      
-      // On applique les mises à jour interdépendantes
-      this.config = {
-        ...this.config,
-        ...interdependentUpdates
-      }
-
-      // Si mode non avancé, on calcule aussi les paramètres avancés
-      if (!this.config.showAdvanced) {
-        this.config.typeCharge = calculateAutoTypeCharge(this.config)
-        this.config.facteurQualite = calculateAutoFacteurQualite(this.config)
-      }
+      // Log après mise à jour
+      console.log('Updated config:', this.config)
     },
 
     resetConfig() {

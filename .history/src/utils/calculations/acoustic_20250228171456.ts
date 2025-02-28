@@ -372,57 +372,26 @@ function calculateCrossoverFrequencies(config: Config): string[] {
 }
 
 export function calculateAutoTypeCharge(config: Config): string {
-  // Le type de charge dépend de plusieurs paramètres
+  // Logique de calcul automatique du type de charge selon les paramètres standards
   if (config.distanceAuMur === 'proche') {
     return 'clos'
   }
-  if (config.typeEnceinte === 'bibliothèque') {
-    return config.amplitudeEcoute === 'forte' ? 'bass-reflex' : 'clos'
+  if (config.styleMusical === 'classique' || config.styleMusical === 'acoustique') {
+    return 'bass-reflex'
   }
-  if (config.styleMusical === 'electro' || config.styleMusical === 'rock') {
+  if (config.amplitudeEcoute === 'forte') {
     return 'double-bass-reflex'
   }
-  return 'bass-reflex'
+  return 'bass-reflex' // valeur par défaut
 }
 
 export function calculateAutoFacteurQualite(config: Config): number {
-  // Le facteur de qualité dépend du style et de l'amplitude
-  if (config.amplitudeEcoute === 'forte') {
-    return 0.9 // Plus d'impact pour forte amplitude
-  }
+  // Logique de calcul automatique du facteur de qualité selon les paramètres standards
   if (config.styleMusical === 'classique' || config.styleMusical === 'acoustique') {
-    return 0.6 // Plus neutre pour la musique acoustique
+    return 0.6 // neutre pour la musique acoustique
   }
-  if (config.distanceAuMur === 'proche') {
-    return 0.707 // Butterworth pour position proche du mur
+  if (config.styleMusical === 'electro' || config.styleMusical === 'rock') {
+    return 0.9 // impact pour la musique rythmée
   }
-  return 0.8 // Valeur intermédiaire par défaut
-}
-
-export function updateInterdependentParams(config: Config): Partial<Config> {
-  const updates: Partial<Config> = {}
-
-  // Ajustement de la puissance selon l'amplitude d'écoute
-  if (config.amplitudeEcoute === 'forte') {
-    updates.puissanceAmp = Math.max(config.puissanceAmp, 100)
-  }
-
-  // Ajustement du nombre de voies selon le style musical
-  if (config.styleMusical === 'classique' || config.styleMusical === 'acoustique') {
-    updates.nombreVoies = Math.max(config.nombreVoies, 3)
-  }
-
-  // Ajustement de l'impédance selon la puissance
-  if (config.puissanceAmp > 150) {
-    updates.impedance = 4
-  }
-
-  // Ajustement de l'accord event selon le type d'enceinte
-  if (config.typeEnceinte === 'colonne') {
-    updates.accordEvent = 35 // Plus bas pour les colonnes
-  } else {
-    updates.accordEvent = 50 // Standard pour bibliothèque
-  }
-
-  return updates
+  return 0.707 // valeur Butterworth par défaut
 } 

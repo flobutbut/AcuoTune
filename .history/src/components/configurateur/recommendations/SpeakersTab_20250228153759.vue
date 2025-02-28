@@ -6,18 +6,6 @@ import { calculateAcoustic } from '@/utils/calculations/acoustic'
 
 const store = useConfigurateurStore()
 
-function generateSearchUrl(speaker: any) {
-  const searchTerms = [
-    speaker.type,
-    'haut-parleur',
-    `${speaker.impedance}`,
-    speaker.power,
-    `sensibilité ${speaker.sensitivity}`,
-    `bande passante ${speaker.freqRange}`
-  ].join(' ')
-  return `https://www.google.com/search?q=${encodeURIComponent(searchTerms)}`
-}
-
 const speakerRecommendations = computed(() => {
   if (!store.config) return null
 
@@ -74,6 +62,15 @@ function getFrequencyRange(index: number, totalVoies: number, freqCoupure: strin
     return `${freqs[index - 1]}Hz - ${freqs[index]}Hz`
   }
 }
+
+function generateSearchUrl(speaker: any) {
+  const searchTerms = [
+    speaker.type,
+    ...speaker.specs
+  ].join(' ')
+  
+  return `https://www.google.com/search?q=${encodeURIComponent(searchTerms)}`
+}
 </script>
 
 <template>
@@ -107,7 +104,7 @@ function getFrequencyRange(index: number, totalVoies: number, freqCoupure: strin
           :href="generateSearchUrl(speaker)"
           target="_blank"
           rel="noopener noreferrer"
-          class="mt-4 inline-flex items-center text-sm text-blue-600 hover:text-blue-700"
+          class="mt-3 inline-flex items-center text-sm text-primary-600 hover:text-primary-700"
         >
           Rechercher sur Google
           <svg class="ml-1 w-4 h-4" fill="currentColor" viewBox="0 0 20 20">

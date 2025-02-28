@@ -16,32 +16,19 @@ import {
   PENTE_FILTRE_OPTIONS,
   FACTEUR_QUALITE_OPTIONS
 } from '@/constants/configurateur'
-import { computed } from 'vue'
-import ToggleGroup from '@/components/ui/ToggleGroup.vue'
 
 const store = useConfigurateurStore()
 const { config } = storeToRefs(store)
 
 const handleChange = (event: Event) => {
   const target = event.target as HTMLInputElement | HTMLSelectElement
-  let value: string | number = target.value
-
-  // Debug
-  console.log('Before conversion:', target.name, value, typeof value)
-
-  // Conversion des valeurs numériques
-  if (target.name === 'facteurQualite') {
-    value = parseFloat(value)
-    console.log('After conversion:', value, typeof value) // Debug
-  } else if (target.name === 'accordEvent') {
-    value = parseInt(value)
-  }
-
-  // Debug final
-  console.log('Updating store with:', target.name, value, typeof value)
-
+  const { name, value } = target
+  
   store.updateConfig({
-    [target.name]: value
+    [name]: ['impedance', 'puissanceAmp', 'nombreVoies', 'accordEvent', 'facteurQualite']
+      .includes(name)
+      ? Number(value)
+      : value
   })
 }
 
@@ -63,30 +50,6 @@ const handleFreqCoupureChange = (event: Event, index: number) => {
   const newFreqs = [...config.value.freqCoupureManuelle]
   newFreqs[index] = parseInt(value)
   store.updateConfig({ freqCoupureManuelle: newFreqs })
-}
-
-const facteurQualiteOptions = [
-  { value: 0.6, label: 'Neutre', description: 'Son neutre et précis (0.6)' },
-  { value: 0.707, label: 'Standard', description: 'Équilibre Butterworth (0.707)' },
-  { value: 0.9, label: 'Impact', description: 'Plus d\'impact dans les graves (0.9)' }
-]
-
-// Calcul de la fréquence d'accord par défaut
-const defaultAccordEvent = computed(() => {
-  const baseFreq = config.value.typeEnceinte === 'bibliothèque' ? 50 : 40
-  
-  // Ajustement selon le type de charge
-  if (config.value.typeCharge === 'double-bass-reflex') {
-    return Math.round(baseFreq * 0.8) // -20% pour double bass-reflex
-  }
-  
-  return baseFreq
-})
-
-const toggleAdvanced = () => {
-  store.updateConfig({
-    showAdvanced: !config.value.showAdvanced
-  })
 }
 </script>
 
@@ -125,17 +88,26 @@ const toggleAdvanced = () => {
       />
 
       <!-- Nombre de voies -->
-      <ToggleGroup
-        v-model="config.nombreVoies"
-        label="Nombre de voies"
-        description="Nombre de haut-parleurs par enceinte"
-        :options="[
-          { value: 2, label: '2 voies' },
-          { value: 3, label: '3 voies' },
-          { value: 4, label: '4 voies' }
-        ]"
-        class="mb-8"
-      />
+      <div class="space-y-2">
+        <label class="block text-sm font-medium text-gray-700">
+          Nombre de voies
+        </label>
+        <div class="flex gap-3">
+          <button
+            v-for="num in [2, 3, 4]"
+            :key="num"
+            @click="handleVoiesClick(num)"
+            :class="[
+              'px-4 py-2 text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2',
+              config.nombreVoies === num
+                ? 'bg-indigo-600 text-white hover:bg-indigo-700 focus:ring-indigo-500'
+                : 'bg-white text-gray-700 hover:bg-gray-50 focus:ring-gray-500'
+            ]"
+          >
+            {{ num }} voies
+          </button>
+        </div>
+      </div>
 
       <!-- Amplitude d'écoute -->
       <SelectInput
@@ -191,42 +163,73 @@ const toggleAdvanced = () => {
         @update="handleChange"
       />
 
-      <!-- Bouton paramètres avancés -->
-      <div class="flex items-center justify-between py-4">
-        <span class="text-sm font-medium text-gray-900">Paramètres avancés</span>
+      <!-- Mode avancé toggle -->
+      <div class="flex items-center justify-between">
+        <span class="text-sm font-medium text-gray-700">Mode avancé</span>
         <button
           type="button"
-          @click="() => store.updateConfig({ showAdvanced: !config.showAdvanced })"
-          class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2"
-          :class="[config.showAdvanced ? 'bg-indigo-600' : 'bg-gray-200']"
+          :class="[
+            'relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2',
+            config.showAdvanced ? 'bg-indigo-600' : 'bg-gray-200'
+          ]"
+          @click="handleChange({ target: { name: 'showAdvanced', value: !config.showAdvanced } } as Event)"
         >
           <span
-            class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
-            :class="[config.showAdvanced ? 'translate-x-5' : 'translate-x-0']"
+            :class="[
+              'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out',
+              config.showAdvanced ? 'translate-x-5' : 'translate-x-0'
+            ]"
           />
         </button>
       </div>
 
       <!-- Paramètres avancés -->
-      <div v-if="config.showAdvanced" class="space-y-6">
-        <ToggleGroup
-          v-model="config.typeCharge"
-          label="Type de charge"
-          description="Type de charge acoustique"
-          :options="[
-            { value: 'clos', label: 'Clos' },
-            { value: 'bass-reflex', label: 'Bass-reflex' },
-            { value: 'double-bass-reflex', label: 'Double Bass-reflex', description: 'Extension maximale des basses' }
-          ]"
-          class="mb-8"
-        />
+      <div v-if="config.showAdvanced" class="space-y-6 border-t pt-6">
+        <!-- Type de charge -->
+        <div class="space-y-2">
+          <h3 class="text-sm font-medium text-gray-700">Type de charge</h3>
+          <div class="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <button
+              v-for="option in TYPE_CHARGE_OPTIONS"
+              :key="option.value"
+              :class="[
+                'px-4 py-2 text-sm font-medium rounded-md',
+                config.typeCharge === option.value
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+              ]"
+              @click="handleChange({ target: { name: 'typeCharge', value: option.value } } as Event)"
+            >
+              {{ option.label }}
+            </button>
+          </div>
+          <p class="text-sm text-gray-500">
+            {{ getTypeChargeDescription(config.typeCharge) }}
+          </p>
+        </div>
 
-        <ToggleGroup
-          v-model="config.facteurQualite"
+        <!-- Autres paramètres avancés selon le type de charge -->
+        <template v-if="config.typeCharge !== 'clos'">
+          <RangeInput
+            label="Fréquence d'accord (Hz)"
+            name="accordEvent"
+            :value="config.accordEvent"
+            :min="20"
+            :max="100"
+            :step="1"
+            unit="Hz"
+            @update="handleChange"
+          />
+        </template>
+
+        <RangeInput
           label="Facteur de qualité"
-          description="Contrôle la résonance et l'amortissement"
-          :options="facteurQualiteOptions"
-          class="mb-8"
+          name="facteurQualite"
+          :value="config.facteurQualite"
+          :min="0.5"
+          :max="1.0"
+          :step="0.001"
+          @update="handleChange"
         />
       </div>
     </div>
