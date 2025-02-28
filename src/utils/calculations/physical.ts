@@ -1,4 +1,5 @@
 import type { Config, Dimensions } from '@/types/configurateur'
+import type { PhysicalRecommendation } from '@/types/configurateur'
 
 export const calculateVolume = (config: Config) => {
   const { typeEnceinte, puissanceAmp, styleMusical } = config
@@ -135,5 +136,105 @@ export const calculatePhysicalCharacteristics = (config: Config) => {
     facteurQualite,
     ...ventilationParams,
     suggestedTypeCharge: getSuggestedTypeCharge(config.distanceAuMur, config.styleMusical)
+  }
+}
+
+export const calculatePhysical = (config: Config, acoustic: any): PhysicalRecommendation => {
+  console.log('Calculating physical parameters for:', { config, acoustic })
+
+  // Calcul des dimensions optimales
+  const dimensions = calculateOptimalDimensions(acoustic.volumeOptimal, config.typeEnceinte)
+
+  // Sélection des matériaux recommandés
+  const materiaux = selectMaterials(config)
+
+  // Calcul des spécifications d'évent si nécessaire
+  const eventSpecs = config.typeCharge !== 'clos' 
+    ? calculateEventSpecs(acoustic, dimensions)
+    : undefined
+
+  const result: PhysicalRecommendation = {
+    dimensions,
+    volume: acoustic.volumeOptimal,
+    materiaux,
+    typeCharge: config.typeCharge,
+    ventilation: config.typeCharge !== 'clos',
+    ...(eventSpecs && { eventSpecs })
+  }
+
+  console.log('Physical calculation result:', result)
+  return result
+}
+
+function calculateOptimalDimensions(volume: number, typeEnceinte: string) {
+  // Conversion du volume en cm³
+  const volumeCm3 = volume * 1000
+
+  // Ratios de dimensions selon le type d'enceinte
+  const ratios = {
+    'bibliothèque': { h: 1.6, w: 1, d: 1.25 },
+    'colonne': { h: 3, w: 1, d: 1.5 },
+    'monitoring': { h: 1.4, w: 1, d: 1.2 }
+  }
+
+  const ratio = ratios[typeEnceinte as keyof typeof ratios] || ratios.bibliothèque
+
+  // Calcul de la largeur de base
+  const baseWidth = Math.pow(volumeCm3 / (ratio.h * ratio.w * ratio.d), 1/3)
+
+  return {
+    hauteur: Math.round(baseWidth * ratio.h),
+    largeur: Math.round(baseWidth),
+    profondeur: Math.round(baseWidth * ratio.d)
+  }
+}
+
+function selectMaterials(config: Config): string[] {
+  const materials: string[] = []
+
+  // Matériau principal
+  if (config.budgetNiveau === 'élevé') {
+    materials.push('MDF haute densité 22mm')
+  } else {
+    materials.push('MDF standard 19mm')
+  }
+
+  // Matériau d'amortissement
+  if (config.styleMusical === 'hifi' || config.budgetNiveau === 'élevé') {
+    materials.push('Laine de roche 50mm haute densité')
+    materials.push('Feutre acoustique 10mm')
+  } else {
+    materials.push('Laine de roche 40mm')
+  }
+
+  // Renforts internes
+  if (config.typeEnceinte === 'colonne' || config.budgetNiveau === 'élevé') {
+    materials.push('Tasseaux de renfort 20x20mm')
+  }
+
+  return materials
+}
+
+function calculateEventSpecs(acoustic: any, dimensions: { largeur: number }) {
+  // Surface de l'évent (règle empirique : 10-15% de la surface du HP grave)
+  const baseSurface = dimensions.largeur * dimensions.largeur * 0.12
+
+  // Ajustements selon le type de charge
+  const surfaceMultiplier = acoustic.volumeOptimal > 50 ? 1.2 : 1
+
+  const surface = Math.round(baseSurface * surfaceMultiplier)
+  const diametre = Math.round(Math.sqrt(surface * 4 / Math.PI))
+  
+  // Longueur de l'évent selon la formule de Thiele & Small simplifiée
+  const longueur = Math.round(
+    (23562 * surface) / 
+    (acoustic.frequenceAccord * acoustic.frequenceAccord * diametre)
+  )
+
+  return {
+    surface,          // cm²
+    diametre,         // cm
+    longueur,         // cm
+    frequence: acoustic.frequenceAccord
   }
 } 

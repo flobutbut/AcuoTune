@@ -1,3 +1,5 @@
+import type { Config } from '@/types/configurateur'
+
 interface AcousticParams {
   // Paramètres de base
   impedance: number
@@ -14,6 +16,25 @@ interface AcousticParams {
   freqCoupure: number[]
   accordEvent: number
   facteurQualite: number
+}
+
+interface AcousticResult {
+  volumeOptimal: number      // Volume optimal en litres
+  frequenceAccord: number    // Fréquence d'accord en Hz
+  facteurQualite: number    // Facteur de qualité calculé
+  frequenceResonance: number // Fréquence de résonance en Hz
+  rendementBasse: number     // Rendement dans les basses en dB
+  puissanceMax: number       // Puissance maximale admissible en W
+}
+
+interface AcousticParameters {
+  volumeOptimal: number
+  frequenceAccord: number
+  facteurQualite: number
+  frequenceResonance: number
+  rendementBasse: number
+  puissanceMax: number
+  freqCoupure: string[]
 }
 
 export class AcousticCalculator {
@@ -226,4 +247,126 @@ export class AcousticCalculator {
       global: Math.max(70, Math.min(95, global))
     }
   }
+}
+
+export function calculateAcoustic(config: Config): AcousticParameters {
+  console.log('Calculating acoustic parameters for:', config)
+
+  // Calcul du volume optimal
+  const volumeOptimal = calculateOptimalVolume(config)
+
+  // Calcul de la fréquence d'accord
+  const frequenceAccord = config.typeCharge === 'clos' 
+    ? 0 
+    : config.accordEvent || calculateDefaultAccordFrequency(config)
+
+  // Autres calculs
+  const facteurQualite = config.facteurQualite
+  const frequenceResonance = calculateResonanceFrequency(config)
+  const rendementBasse = calculateBassEfficiency(volumeOptimal)
+  const puissanceMax = calculateMaxPower(config)
+  const freqCoupure = calculateCrossoverFrequencies(config)
+
+  const result: AcousticParameters = {
+    volumeOptimal,
+    frequenceAccord,
+    facteurQualite,
+    frequenceResonance,
+    rendementBasse,
+    puissanceMax,
+    freqCoupure
+  }
+
+  console.log('Acoustic calculation result:', result)
+  return result
+}
+
+function calculateOptimalVolume(config: Config): number {
+  // Volume de base selon la puissance
+  let volume = config.puissanceAmp * 0.3 // 0.3L par watt comme base
+
+  // Ajustements selon le type d'enceinte
+  const volumeMultipliers: Record<string, number> = {
+    'bibliothèque': 0.8,
+    'colonne': 1.2,
+    'monitoring': 1.0
+  }
+  volume *= volumeMultipliers[config.typeEnceinte] || 1
+
+  // Ajustements selon le type de charge
+  if (config.typeCharge === 'bass-reflex') {
+    volume *= 1.4
+  } else if (config.typeCharge === 'double-bass-reflex') {
+    volume *= 1.8
+  }
+
+  return Math.round(volume)
+}
+
+function calculateDefaultAccordFrequency(config: Config): number {
+  // Fréquence d'accord par défaut
+  const baseFreq = config.typeEnceinte === 'bibliothèque' ? 50 : 40
+
+  // Ajustements selon le style musical
+  const freqMultipliers: Record<string, number> = {
+    'bass': 0.9,
+    'hifi': 1.1,
+    'neutre': 1.0
+  }
+
+  return Math.round(baseFreq * (freqMultipliers[config.styleMusical] || 1))
+}
+
+function calculateResonanceFrequency(config: Config): number {
+  // Fréquence de résonance de base
+  const baseFreq = config.typeCharge === 'clos' ? 45 : 35
+
+  // Ajustements selon le type d'enceinte
+  return Math.round(baseFreq * (config.typeEnceinte === 'bibliothèque' ? 1.2 : 1.0))
+}
+
+function calculateBassEfficiency(volume: number): number {
+  // Rendement selon le volume
+  return Math.round((85 + Math.log10(volume) * 3) * 10) / 10
+}
+
+function calculateMaxPower(config: Config): number {
+  // Puissance maximale selon la configuration
+  let power = config.puissanceAmp * 1.5
+
+  // Ajustements selon l'amplitude d'écoute
+  const powerMultipliers: Record<string, number> = {
+    'faible': 1.2,
+    'moyenne': 1.5,
+    'forte': 1.8
+  }
+
+  return Math.round(power * (powerMultipliers[config.amplitudeEcoute] || 1.5))
+}
+
+function calculateCrossoverFrequencies(config: Config): string[] {
+  if (config.showAdvanced) {
+    return config.freqCoupureManuelle.map(f => `${f} Hz`)
+  }
+
+  const freqs: number[] = []
+  switch (config.nombreVoies) {
+    case 2:
+      freqs.push(config.styleMusical === 'bass' ? 2500 : 3000)
+      break
+    case 3:
+      freqs.push(
+        config.styleMusical === 'bass' ? 400 : 500,
+        config.styleMusical === 'bass' ? 2500 : 3000
+      )
+      break
+    case 4:
+      freqs.push(
+        config.styleMusical === 'bass' ? 200 : 250,
+        config.styleMusical === 'bass' ? 800 : 1000,
+        config.styleMusical === 'bass' ? 2500 : 3000
+      )
+      break
+  }
+  return freqs.map(f => `${f} Hz`)
 } 

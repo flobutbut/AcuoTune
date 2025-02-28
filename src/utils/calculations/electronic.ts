@@ -1,79 +1,121 @@
 import type { Config } from '@/types/configurateur'
+import type { ElectronicRecommendation } from '@/types/configurateur'
 
-export const getFrequencesCoupure = (config: Config): string[] => {
-  const { nombreVoies, styleMusical, showAdvanced, freqCoupureManuelle } = config
-  
-  // Si mode avancé et fréquences manuelles définies, les utiliser
-  if (showAdvanced && freqCoupureManuelle.length > 0) {
-    return freqCoupureManuelle.map(freq => `${freq} Hz`)
+interface AcousticResult {
+  volumeOptimal: number
+  frequenceAccord: number
+  facteurQualite: number
+  frequenceResonance: number
+  rendementBasse: number
+  puissanceMax: number
+}
+
+export function calculateElectronic(config: Config, acoustic: AcousticResult): ElectronicRecommendation {
+  console.log('Calculating electronic parameters for:', { config, acoustic })
+
+  // Calcul des fréquences de coupure
+  const frequencesCoupure = calculateCrossoverFrequencies(config)
+
+  // Calcul de la pente des filtres
+  const penteFiltre = calculateFilterSlope(config)
+
+  // Calcul de l'impédance globale
+  const impedanceGlobale = calculateGlobalImpedance(config)
+
+  // Calcul de la puissance admissible
+  const puissanceAdmissible = calculateAdmissiblePower(acoustic.puissanceMax)
+
+  // Calcul de la sensibilité globale
+  const sensibilite = calculateGlobalSensitivity(config, acoustic)
+
+  const result: ElectronicRecommendation = {
+    frequencesCoupure,
+    penteFiltre,
+    impedanceGlobale,
+    puissanceAdmissible,
+    sensibilite
   }
 
-  // Sinon, utiliser les valeurs automatiques
-  const frequences = []
-  switch (nombreVoies) {
+  console.log('Electronic calculation result:', result)
+  return result
+}
+
+function calculateCrossoverFrequencies(config: Config): string[] {
+  // Si mode avancé et fréquences manuelles définies, les utiliser
+  if (config.showAdvanced && config.freqCoupureManuelle.length > 0) {
+    return config.freqCoupureManuelle.map(freq => `${freq} Hz`)
+  }
+
+  // Sinon, calculer les fréquences recommandées
+  const freqs: number[] = []
+  switch (config.nombreVoies) {
     case 2:
-      frequences.push(styleMusical === 'bass' ? '2500 Hz' : '3000 Hz')
+      freqs.push(config.styleMusical === 'bass' ? 2500 : 3000)
       break
     case 3:
-      frequences.push(
-        styleMusical === 'bass' ? '400 Hz' : '500 Hz',
-        styleMusical === 'bass' ? '2500 Hz' : '3000 Hz'
+      freqs.push(
+        config.styleMusical === 'bass' ? 400 : 500,
+        config.styleMusical === 'bass' ? 2500 : 3000
       )
       break
     case 4:
-      frequences.push(
-        styleMusical === 'bass' ? '200 Hz' : '250 Hz',
-        styleMusical === 'bass' ? '800 Hz' : '1000 Hz',
-        styleMusical === 'bass' ? '2500 Hz' : '3000 Hz'
+      freqs.push(
+        config.styleMusical === 'bass' ? 200 : 250,
+        config.styleMusical === 'bass' ? 800 : 1000,
+        config.styleMusical === 'bass' ? 2500 : 3000
       )
       break
   }
-  return frequences
+  return freqs.map(freq => `${freq} Hz`)
 }
 
-export const calculateElectronicParameters = (config: Config) => {
-  const { 
-    nombreVoies, 
-    styleMusical, 
-    budgetNiveau, 
-    amplitudeEcoute, 
-    puissanceAmp, 
-    impedance,
-    showAdvanced,
-    penteFiltre 
-  } = config
-
-  // Calcul des fréquences de coupure
-  const freqCoupure = getFrequencesCoupure(config)
-  
-  // Détermination de la pente du filtre
-  let penteCalculee = '12 dB/octave'
-  if (!showAdvanced) {
-    // Mode automatique
-    if (budgetNiveau === 'élevé' || styleMusical === 'hifi') {
-      penteCalculee = '24 dB/octave'
-    }
-  } else {
-    // Mode avancé : utiliser la pente choisie
-    penteCalculee = `${penteFiltre} dB/octave`
+function calculateFilterSlope(config: Config): string {
+  // Si mode avancé, utiliser la pente configurée
+  if (config.showAdvanced) {
+    return `${config.penteFiltre} dB/octave`
   }
 
-  const impedanceGlobale = `${impedance} Ω nominal`
-  const puissanceAdmissible = `${Math.round(puissanceAmp * 1.5)}W RMS`
-  
-  // Calcul de l'efficacité en fonction de l'amplitude d'écoute
-  let efficacite = '89 dB'
-  if (amplitudeEcoute === 'forte') {
-    efficacite = '91 dB'
-  } else if (amplitudeEcoute === 'faible') {
-    efficacite = '87 dB'
+  // Sinon, déterminer la pente recommandée
+  if (config.budgetNiveau === 'élevé' || config.styleMusical === 'hifi') {
+    return '24 dB/octave'
+  } else if (config.nombreVoies >= 3) {
+    return '18 dB/octave'
+  }
+  return '12 dB/octave'
+}
+
+function calculateGlobalImpedance(config: Config): string {
+  // Calcul de l'impédance nominale
+  let impedance = config.impedance
+
+  // Ajustements selon le nombre de voies
+  if (config.nombreVoies >= 3) {
+    impedance = Math.max(4, impedance - 2)
   }
 
-  return {
-    freqCoupure,
-    penteFiltre: penteCalculee,
-    impedanceGlobale,
-    puissanceAdmissible,
-    efficacite
+  return `${impedance} Ω nominal (${impedance - 1}-${impedance + 2} Ω)`
+}
+
+function calculateAdmissiblePower(maxPower: number): string {
+  const rms = Math.round(maxPower)
+  const peak = Math.round(maxPower * 2)
+  return `${rms}W RMS / ${peak}W crête`
+}
+
+function calculateGlobalSensitivity(config: Config, acoustic: AcousticResult): string {
+  // Sensibilité de base selon le rendement calculé
+  let sensitivity = acoustic.rendementBasse
+
+  // Ajustements selon l'amplitude d'écoute
+  const sensAdjust = {
+    'faible': -2,
+    'moyenne': 0,
+    'forte': +2
   }
+  sensitivity += sensAdjust[config.amplitudeEcoute as keyof typeof sensAdjust] || 0
+
+  // Ajustements selon le nombre de voies
+  sensitivity += (config.nombreVoies - 2) * 0.5
+
+  return `${Math.round(sensitivity)} dB (1W/1m)`
 } 
